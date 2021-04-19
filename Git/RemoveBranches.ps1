@@ -3,7 +3,8 @@ param (
     [Parameter(Mandatory=$true)] [string] $ProjectDir,
     [Parameter(Mandatory=$true)] [string] $BranchListFile,
     [string] $Prefix = "origin",
-    [switch] $Remove=$false
+    [switch] $CaseSensitive,
+    [switch] $Remove
 )
 
 $Git = "git"
@@ -27,7 +28,7 @@ function CompareLists($RemoteList, $BranchList) {
     $found = [System.Collections.ArrayList] @()
     $notfound = [System.Collections.ArrayList] @()
     foreach ($item in $BranchList) {
-        if ($item -cin $RemoteList) {
+        if (($CaseSensitive -and $item -cin $RemoteList) -or (-not $CaseSensitive -and $item -in $RemoteList)) {
             [void] $found.Add($item)
         }
         else {

@@ -2,10 +2,13 @@
 param(
 [parameter(Mandatory=$true)][string] $SourcePath,
 [parameter(Mandatory=$true)][string] $DestPath,
-[parameter()] [Switch] $ReportMode
+[Hashtable] $Switches = $null,
+[Switch] $ReportMode
 )
 
-function UpdateDirectoryContents($SourcePath, $DestPath, $FoundItems=$null)
+if ($Switches.ReportMode) { $ReportMode = $true }
+
+function UpdateDirectoryContents($SourcePath, $DestPath, $ReportMode=$false, $FoundItems=$null)
 {
     if ($null -eq $FoundItems)
     {
@@ -20,7 +23,7 @@ function UpdateDirectoryContents($SourcePath, $DestPath, $FoundItems=$null)
         {
             if ($item.Attributes -band [System.IO.FileAttributes]::Directory)
             {
-                $FoundItems = UpdateDirectoryContents $item.FullName $DestItem.FullName $FoundItems
+                $FoundItems = UpdateDirectoryContents $item.FullName $DestItem.FullName $ReportMode $FoundItems
             }
             else
             {
@@ -29,14 +32,18 @@ function UpdateDirectoryContents($SourcePath, $DestPath, $FoundItems=$null)
         }
         else
         {
-            Write-Host "Copy `"$($item.FullName)`" to `"$DestPath`"" -ForegroundColor Yellow -BackgroundColor DarkGreen
             if (-not $ReportMode)
             {
+                Write-Host "Copy `"$($item.FullName)`" to `"$DestPath`"" -ForegroundColor Yellow -BackgroundColor DarkGreen
                 Copy-Item $item.FullName $DestPath -Recurse
+            }
+            else
+            {
+                Write-Host "Need to copy `"$($item.FullName)`" to `"$DestPath`"" -ForegroundColor Yellow -BackgroundColor DarkGreen
             }
         }
     }
     return , $FoundItems
 }
 
-return UpdateDirectoryContents $SourcePath $DestPath
+return UpdateDirectoryContents $SourcePath $DestPath $ReportMode

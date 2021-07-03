@@ -21,24 +21,29 @@ param(
             ParameterSetName="Normal")] [String] $Attribute = "Name",
     [Parameter(
             Position=4,
+            HelpMessage="Hashtable of switches",
+            ParameterSetName="Normal")] [Hashtable] $Switches = $null,
+    [Parameter(
             HelpMessage="Report mode (not to update anything, just report)",
             ParameterSetName="Normal")] [Switch] $ReportMode,
     [Parameter(
-            Position=5,
             HelpMessage="Don't backup destination file before updating",
             ParameterSetName="Normal")] [Switch] $DontBackup,
     [Parameter(
-            Position=6,
             HelpMessage="Quiet operation, no confirmation prompts",
             ParameterSetName="Normal")] [Switch] $Quiet,
     [Parameter(
-            Position=7,
             HelpMessage="Don't set Powershell's Stop preferences (for better debugging)",
             ParameterSetName="Normal")] [Switch] $DontStop,
     [Parameter(
             HelpMessage="Print script's version and exit",
             ParameterSetName="Version")] [Switch] $Version
 )
+
+if ($Switches.ReportMode) { $ReportMode = $true }
+if ($Switches.DontBackup) { $DontBackup = $true }
+if ($Switches.Quiet) { $Quiet = $true }
+if ($Switches.DontStop) { $DontStop = $true }
 
 if (-not $DontStop) {
     $ErrorActionPreference = "Stop"

@@ -16,12 +16,13 @@ def os_api_get_volumes(auth_obj: OsAuth, url, page_sz=0, num_pages=0):
 
 
 class OsVolumes:
-    def __init__(self, auth_obj: OsAuth, url):
+    def __init__(self, auth_obj: OsAuth, url, users: OsUsers = None):
         self.auth = auth_obj
         self.url = url
         self.volumes = {"by_id": {}, "by_status": {}, "by_snapshot_id": {}}
         self.vol_count_by_status = dict()
         self.snapshots = {"all": [], "by_id": {}, "by_status": {}, "by_volume_id": {}}
+        self.users = users
         self.refresh()
 
     def refresh(self, page_sz=0, num_pages=0):
@@ -37,6 +38,8 @@ class OsVolumes:
                 self.snapshots["by_status"][status] = list()
             self.snapshots["by_status"][status].append(i)
         for i in os_api_get_resources_gen(self.auth, self.url, "volumes/detail", "volumes", "volumes_links", page_sz, num_pages, {"all_tenants": True}):
+            if self.users:
+                self.users.add_id(i["user_id"])
             self.volumes["by_id"][i["id"]] = i
             status = i["status"]
             snapshot_id = i["snapshot_id"]
@@ -97,10 +100,15 @@ class OsVolumes:
     def get_snapshots(self):
         return self.snapshots["all"]
 
+    def get_snapshot_by_id(self, snap_id):
+        return self.snapshots["by_id"].get(snap_id, dict())
+
 
 if __name__ == "__main__":
     logmsg("Auth")
     auth = OsAuth()
+
+    users = OsUsers(auth, auth.identity_url)
 
     logmsg("Get projects")
     projects = os_api_get_projects(auth, auth.identity_url)
@@ -109,7 +117,11 @@ if __name__ == "__main__":
     volumes_url = os_api_get_service_url(auth, "volumev3")
 
     logmsg("Get volumes")
-    volumes = OsVolumes(auth, volumes_url)
+    volumes = OsVolumes(auth, volumes_url, users)
+
+    logmsg("Get users")
+    users.refresh()
+
     logmsg("Existing volumes statuses: {}".format(volumes.get_vol_count_by_status()))
 
     logmsg("Prepare report")
@@ -123,7 +135,8 @@ if __name__ == "__main__":
         "high_fill": None,
         "sheets": dict()
     }
-    header = ("id", "name", "size", "status", "children (direct/indirect)", "age_since_create", "age_since_update")
+    header = ("id", "name", "size", "status", "vol_user", "child_volumes", "age_since_create", "age_since_update")
+    header_display = ("vol_id", "vol_name", "vol_size", "vol_status", "vol_user", "child_volumes", "vol_age_since_create", "vol_age_since_update")
     wb = Workbook()
     ws = None
     for row in volumes.get_by_status_excluding({"in-use"}):
@@ -139,7 +152,7 @@ if __name__ == "__main__":
         ws = wb[project]
         if ws.title not in report_context["sheets"]:
             report_context["sheets"][ws.title] = dict()
-            ws.append(header)
+            ws.append(header_display)
             report_context["sheets"][ws.title]["row_count"] = 1
             adjust_col_width(ws, report_context["sheets"][ws.title]["row_count"], header)
             if not report_context["base_font"]:
@@ -156,7 +169,8 @@ if __name__ == "__main__":
             for cell in ws[report_context["sheets"][ws.title]["row_count"]]:
                 cell.font = report_context["header_font"]
         row_data = {header.index(k) + 1: v for k, v in row.items() if k in ("id", "name", "size", "status")}
-        row_data[header.index("children (direct/indirect)") + 1] = "\n".join("{} ({} in {})".format(x["id"], x["status"], projects.get(x["os-vol-tenant-attr:tenant_id"], {"name": "__nonexistent__"})["name"]) for x in volumes.get_children_by_vol_id(row["id"]))
+        row_data[header.index("vol_user") + 1] = users.get_by_id(volumes.get_by_id(row["id"])["user_id"]).get("name", "")
+        row_data[header.index("child_volumes") + 1] = "\n".join("{} ({} in {})".format(x["id"], x["status"], projects.get(x["os-vol-tenant-attr:tenant_id"], {"name": "__nonexistent__"})["name"]) for x in volumes.get_children_by_vol_id(row["id"]))
         row_data[header.index("age_since_create") + 1] = os_timestamp_age(row["created_at"])
         row_data[header.index("age_since_update") + 1] = os_timestamp_age(row["updated_at"] or row["created_at"])
         ws.append(row_data)

@@ -5,6 +5,8 @@ if __name__ == "__main__":
     logmsg("Auth")
     auth = OsAuth()
 
+    users = OsUsers(auth, auth.identity_url)
+
     logmsg("Get projects")
     projects = os_api_get_projects(auth, auth.identity_url)
 
@@ -12,7 +14,10 @@ if __name__ == "__main__":
     volumes_url = os_api_get_service_url(auth, "volumev3")
 
     logmsg("Get volumes")
-    volumes = OsVolumes(auth, volumes_url)
+    volumes = OsVolumes(auth, volumes_url, users)
+
+    logmsg("Get users")
+    users.refresh()
 
     logmsg("Prepare report")
     report_file = get_report_file_name()
@@ -25,7 +30,8 @@ if __name__ == "__main__":
         "high_fill": None,
         "sheets": dict()
     }
-    header = ("id", "name", "size", "status", "children (direct/indirect)", "age_since_create", "age_since_update")
+    header = ("id", "name", "size", "status", "vol_user", "child_volumes", "age_since_create", "age_since_update")
+    header_display = ("snap_id", "snap_name", "snap_size", "snap_status", "vol_user", "child_volumes", "snap_age_since_create", "snap_age_since_update")
     wb = Workbook()
     ws = None
     for row in volumes.get_snapshots():
@@ -41,7 +47,7 @@ if __name__ == "__main__":
         ws = wb[project]
         if ws.title not in report_context["sheets"]:
             report_context["sheets"][ws.title] = dict()
-            ws.append(header)
+            ws.append(header_display)
             report_context["sheets"][ws.title]["row_count"] = 1
             adjust_col_width(ws, report_context["sheets"][ws.title]["row_count"], header)
             if not report_context["base_font"]:
@@ -58,7 +64,8 @@ if __name__ == "__main__":
             for cell in ws[report_context["sheets"][ws.title]["row_count"]]:
                 cell.font = report_context["header_font"]
         row_data = {header.index(k) + 1: v for k, v in row.items() if k in ("id", "name", "size", "status")}
-        row_data[header.index("children (direct/indirect)") + 1] = "\n".join("{} ({} in {})".format(x["id"], x["status"], projects.get(x["os-vol-tenant-attr:tenant_id"], {"name": "__nonexistent__"})["name"]) for x in volumes.get_children_by_snap_id(row["id"]))
+        row_data[header.index("vol_user") + 1] = users.get_by_id(volumes.get_by_id(row["volume_id"])["user_id"]).get("name", "")
+        row_data[header.index("child_volumes") + 1] = "\n".join("{} ({} in {})".format(x["id"], x["status"], projects.get(x["os-vol-tenant-attr:tenant_id"], {"name": "__nonexistent__"})["name"]) for x in volumes.get_children_by_snap_id(row["id"]))
         row_data[header.index("age_since_create") + 1] = os_timestamp_age(row["created_at"])
         row_data[header.index("age_since_update") + 1] = os_timestamp_age(row["updated_at"] or row["created_at"])
         ws.append(row_data)

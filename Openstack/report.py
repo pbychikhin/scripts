@@ -273,6 +273,26 @@ class OsPorts:
         return self.ports["by_network"].get(network_id, [])
 
 
+class OsUsers:
+    def __init__(self, auth_obj:OsAuth, url):
+        self.auth = auth_obj
+        self.url = url
+        self.user_ids = set()
+        self.users = dict()
+
+    def add_id(self, user_id):
+        self.user_ids.add(user_id)
+
+    def refresh(self):
+        self.users = {"by_id": {}}
+        for i in self.user_ids:
+            self.users["by_id"][i] = os_api_get(self.auth, self.url, "users/{}".format(i)).json()["user"]
+        self.user_ids = set()
+
+    def get_by_id(self, user_id):
+        return self.users["by_id"].get(user_id, dict())
+
+
 InspectionSeverity = namedtuple("InspectionSeverity", ("LOW", "MEDIUM", "HIGH"))(*range(1, 4))
 
 

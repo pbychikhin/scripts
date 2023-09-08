@@ -89,6 +89,6 @@ if __name__ == "__main__":
     orig_sheets = wb._sheets    # manipulate protected member for efficiency
     for sheetname in wb.sheetnames:
         wb._sheets = [sheet for sheet in orig_sheets if sheet.title == sheetname]
-        report_file_path = path_join(report_dir, "project_{}.xlsx".format(sheetname))
+        report_file_path = path_join(report_dir, "snapshot_project_{}.xlsx".format(sheetname))
         logmsg("  Write {}".format(report_file_path))
         wb.save(report_file_path)

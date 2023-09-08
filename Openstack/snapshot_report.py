@@ -30,12 +30,13 @@ if __name__ == "__main__":
         "high_fill": None,
         "sheets": dict()
     }
-    header = ("id", "name", "size", "status", "vol_user", "child_volumes", "age_since_create", "age_since_update")
-    header_display = ("snap_id", "snap_name", "snap_size", "snap_status", "vol_user", "child_volumes", "snap_age_since_create", "snap_age_since_update")
+    header = ("id", "name", "size", "status", "volume", "vol_user", "child_volumes", "age_since_create", "age_since_update")
+    header_display = ("snap_id", "snap_name", "snap_size", "snap_status", "volume", "vol_user", "child_volumes", "snap_age_since_create", "snap_age_since_update")
     wb = Workbook()
     ws = None
     for row in volumes.get_snapshots():
         project = projects.get(row["os-extended-snapshot-attributes:project_id"], {"name": "__nonexistent__"})["name"]
+        volume = volumes.get_by_id(row["volume_id"])
         if not report_context["sheets"]:
             ws = wb.active
             ws.title = project
@@ -64,7 +65,8 @@ if __name__ == "__main__":
             for cell in ws[report_context["sheets"][ws.title]["row_count"]]:
                 cell.font = report_context["header_font"]
         row_data = {header.index(k) + 1: v for k, v in row.items() if k in ("id", "name", "size", "status")}
-        row_data[header.index("vol_user") + 1] = users.get_by_id(volumes.get_by_id(row["volume_id"])["user_id"]).get("name", "")
+        row_data[header.index("volume") + 1] = "{} ({} in {})".format(volume["id"], volume["status"], projects.get(volume["os-vol-tenant-attr:tenant_id"], {"name": "__nonexistent__"})["name"])
+        row_data[header.index("vol_user") + 1] = users.get_by_id(volume["user_id"]).get("name", "")
         row_data[header.index("child_volumes") + 1] = "\n".join("{} ({} in {})".format(x["id"], x["status"], projects.get(x["os-vol-tenant-attr:tenant_id"], {"name": "__nonexistent__"})["name"]) for x in volumes.get_children_by_snap_id(row["id"]))
         row_data[header.index("age_since_create") + 1] = os_timestamp_age(row["created_at"])
         row_data[header.index("age_since_update") + 1] = os_timestamp_age(row["updated_at"] or row["created_at"])
@@ -89,6 +91,6 @@ if __name__ == "__main__":
     orig_sheets = wb._sheets    # manipulate protected member for efficiency
     for sheetname in wb.sheetnames:
         wb._sheets = [sheet for sheet in orig_sheets if sheet.title == sheetname]
-        report_file_path = path_join(report_dir, "snapshot_project_{}.xlsx".format(sheetname))
+        report_file_path = path_join(report_dir, "snapshot_report_{}.xlsx".format(sheetname))
         logmsg("  Write {}".format(report_file_path))
         wb.save(report_file_path)

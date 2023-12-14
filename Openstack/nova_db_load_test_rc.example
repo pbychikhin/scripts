@@ -1,0 +1,4 @@
+export ENGINE_URL=mysql+pymysql://[user]:[password]@[ip_addr]:[port]/nova?charset=utf8
+export ENGINE_POOL_SIZE=10
+export ENGINE_MAX_OVERFLOW=30
+export ENGINE_POOL_RECYCLE=3600

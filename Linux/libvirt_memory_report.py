@@ -2,6 +2,7 @@
 
 from subprocess import run, PIPE
 from json import dumps
+from base64 import b64encode
 
 def get_vm_list():
     return run(["virsh", "list", "--uuid"], check=True, stdout=PIPE, universal_newlines=True).stdout.strip().splitlines()
@@ -29,4 +30,4 @@ for vm in get_vm_list():
         "proc_mem": get_proc_mem_kb(get_vm_pid(vm))
     }
 
-print(dumps(report))
+print(b64encode(dumps(report).encode("ascii")))

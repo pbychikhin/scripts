@@ -30,4 +30,4 @@ for vm in get_vm_list():
         "proc_mem": get_proc_mem_kb(get_vm_pid(vm))
     }
 
-print(b64encode(dumps(report).encode("ascii")))
+print(b64encode(dumps(report).encode()).decode())

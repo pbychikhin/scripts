@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from subprocess import run, PIPE
+from json import dumps
 
 def get_vm_list():
     return run(["virsh", "list", "--uuid"], check=True, stdout=PIPE, universal_newlines=True).stdout.strip().splitlines()
@@ -21,5 +22,11 @@ def get_proc_mem_kb(pid):
             if line_parts[0] == "VmRSS":
                 return float(line_parts[1].strip().split()[0])
 
+report = dict()
 for vm in get_vm_list():
-    print("{}: (vm_mem) {}, (proc_mem) {}".format(vm, get_vm_mem_kb(vm), get_proc_mem_kb(get_vm_pid(vm))))
+    report[vm] = {
+        "vm_mem": get_vm_mem_kb(vm),
+        "proc_mem": get_proc_mem_kb(get_vm_pid(vm))
+    }
+
+print(dumps(report))

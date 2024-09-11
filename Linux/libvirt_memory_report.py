@@ -25,9 +25,13 @@ def get_proc_mem_kb(pid):
 
 report = dict()
 for vm in get_vm_list():
+    vm_mem = get_vm_mem_kb(vm)
+    proc_mem = get_proc_mem_kb(get_vm_pid(vm))
+    ratio = proc_mem / vm_mem
     report[vm] = {
-        "vm_mem": get_vm_mem_kb(vm),
-        "proc_mem": get_proc_mem_kb(get_vm_pid(vm))
+        "vm_mem": vm_mem,
+        "proc_mem": proc_mem,
+        "ratio": ratio
     }
 
 print(b64encode(dumps(report).encode()).decode())

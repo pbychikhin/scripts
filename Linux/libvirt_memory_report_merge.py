@@ -10,5 +10,6 @@ for k, v in load(stdin).items():
     if v["retcode"] == 0:
         report.update(loads(b64decode(v["stdout"]).decode()))
 
-for k, v in report.items():
-    print("{}: (vm_mem) {vm_mem}, (proc_mem) {proc_mem}, (ratio) {ratio}".format(k, **v))
+sorted_keys = sorted(list(report.keys()), key=lambda a: report[a]["ratio"], reverse=True)
+for k in sorted_keys:
+    print("{}: (vm_mem) {vm_mem:.2f}, (proc_mem) {proc_mem:.2f}, (ratio) {ratio:.2f}".format(k, **report[k]))

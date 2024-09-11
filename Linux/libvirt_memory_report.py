@@ -29,8 +29,8 @@ for vm in get_vm_list():
     proc_mem = get_proc_mem_kb(get_vm_pid(vm))
     ratio = proc_mem / vm_mem
     report[vm] = {
-        "vm_mem": vm_mem,
-        "proc_mem": proc_mem,
+        "vm_mem": vm_mem / 1000,
+        "proc_mem": proc_mem / 1000,
         "ratio": ratio
     }
 

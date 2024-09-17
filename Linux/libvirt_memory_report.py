@@ -3,45 +3,90 @@
 from subprocess import run, PIPE
 from json import dumps
 from base64 import b64encode
-from sys import stderr
+# from sys import stderr
+from os import scandir, readlink
+from os.path import basename
 
 def get_vm_list():
-    return run(["virsh", "list", "--uuid"], check=True, stdout=PIPE, universal_newlines=True).stdout.strip().splitlines()
+    return run(["virsh", "list", "--all", "--uuid"], check=True, stdout=PIPE, universal_newlines=True).stdout.strip().splitlines()
 
-def get_vm_mem_kb(vm_uuid):
-    rv = dict()
-    rv_keys = ["actual", "rss"]
-    print("DEBUG, virsh dommemstat {}".format(vm_uuid), file=stderr)
-    for line in run(["virsh", "dommemstat", vm_uuid], check=True, stdout=PIPE, universal_newlines=True).stdout.strip().splitlines():
-        line_parts = line.split()
+def get_vm_info(vm_uuid):
+    rv = {
+        "pid": None,
+        "rss": 0
+    }
+    rv_keys_map = {
+        "Name": "name",
+        "Max memory": "memory",
+        "rss": "rss"
+    }
+    rv_float_items = ["memory", "rss"]
+    rv_keys = ["Name", "Max memory"]
+    for line in run(["virsh", "dominfo", vm_uuid], check=True, stdout=PIPE, universal_newlines=True).stdout.strip().splitlines():
+        line_parts = line.split(":")
         if line_parts[0] in rv_keys:
-            rv[line_parts[0]] = float(line_parts[1].strip().split()[0])
-    print("DEBUG, {}".format(rv), file=stderr)
-    return rv
-
-def get_vm_pid(vm_uuid):
-    return run(["pgrep", "-f", vm_uuid], check=True, stdout=PIPE, universal_newlines=True).stdout.strip().splitlines()[0]
-
-def get_proc_mem_kb(pid):
-    rv = dict()
-    rv_keys = ["VmRSS"]
-    with open("/proc/{}/status".format(pid)) as proc_status:
-        for line in proc_status:
-            line_parts = line.split(":")
+            rv[rv_keys_map[line_parts[0]]] = line_parts[1].strip().split()[0]
+    try:
+        with open("/var/run/libvirt/qemu/{}.pid".format(rv["name"])) as qemu_pid_file:
+            for line in qemu_pid_file:
+                rv["pid"] = line.strip()
+                break
+    except FileNotFoundError:
+        pass
+    if rv["pid"] is not None:
+        rv_keys = ["rss"]
+        for line in run(["virsh", "dommemstat", vm_uuid], check=True, stdout=PIPE, universal_newlines=True).stdout.strip().splitlines():
+            line_parts = line.split()
             if line_parts[0] in rv_keys:
-                rv[line_parts[0]] = float(line_parts[1].strip().split()[0])
+                rv[rv_keys_map[line_parts[0]]] = line_parts[1].strip().split()[0]
+    for k in rv_float_items:
+        rv[k] = float(rv[k])
     return rv
 
-report = dict()
+def get_proc_list():
+    rv = list()
+    for i in scandir("/proc"):
+        if i.is_dir() and i.name.isdecimal():
+            rv.append(i.name)
+    return rv
+
+def get_proc_info(pid):
+    rv = dict()
+    try:
+        rv["name"] = basename(readlink("/proc/{}/exe".format(pid)))
+        with open("/proc/{}/statm".format(pid)) as proc_statm_file:
+            for line in proc_statm_file:
+                rv["rss"] = float(line.strip().split()[1]) * 4
+                break
+        with open("/proc/{}/comm".format(pid)) as proc_comm_file:
+            for line in proc_comm_file:
+                rv["comm"] = line.strip()
+                break
+        return rv
+    except FileNotFoundError:
+        return None
+
+report = {
+    "proc": dict(),
+    "vm": dict()
+}
+
 for vm in get_vm_list():
-    vm_mem = get_vm_mem_kb(vm)
-    proc_mem = get_proc_mem_kb(get_vm_pid(vm))
-    ratio = vm_mem["rss"] / vm_mem["actual"]
-    report[vm] = {
-        "actual": vm_mem["actual"] / 1024,
-        "rss": vm_mem["rss"] / 1024,
-        "proc_rss": proc_mem["VmRSS"] / 1024,
+    vm_info = get_vm_info(vm)
+    ratio = vm_info["rss"] / vm_info["memory"]
+    report["vm"][vm] = {
+        "pid": vm_info["pid"],
+        "memory": vm_info["memory"] / 1024,
+        "rss": vm_info["rss"] / 1024,
         "ratio": ratio
     }
+
+for proc in set(get_proc_list()) - set([x["pid"] for x in report["vm"].values()]):
+    proc_info = get_proc_info(proc)
+    if proc_info is not None:
+        report["proc"][proc] = {
+            "name": proc_info["name"] if proc_info["name"].find(proc_info["comm"]) == 0 else "{}:{}".format(proc_info["name"], proc_info["comm"]),
+            "rss": proc_info["rss"] / 1024
+        }
 
 print(b64encode(dumps(report).encode()).decode())

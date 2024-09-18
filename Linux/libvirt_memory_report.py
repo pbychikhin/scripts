@@ -87,11 +87,11 @@ report = {
 
 for vm in get_vm_list():
     vm_info = get_vm_info(vm)
-    ratio = vm_info["rss"] / vm_info["memory"]
+    ratio = round(vm_info["rss"] / vm_info["memory"], 2)
     report["vm"][vm] = {
         "pid": vm_info["pid"],
-        "memory": vm_info["memory"] / 1024,
-        "rss": vm_info["rss"] / 1024,
+        "memory": round(vm_info["memory"] / 1024, 2),
+        "rss": round(vm_info["rss"] / 1024, 2),
         "ratio": ratio
     }
 
@@ -100,13 +100,13 @@ for proc in set(get_proc_list()) - set([x["pid"] for x in report["vm"].values()]
     if proc_info is not None:
         report["proc"][proc] = {
             "name": proc_info["name"] if proc_info["name"].find(proc_info["comm"]) == 0 else "{}:{}".format(proc_info["name"], proc_info["comm"]),
-            "rss": proc_info["rss"] / 1024
+            "rss": round(proc_info["rss"] / 1024, 2)
         }
 
 host_info = get_host_info()
 report["host"] = {
-    "mem_total": host_info["mem_total"] / 1024,
-    "mem_available": host_info["mem_available"] / 1024,
+    "mem_total": round(host_info["mem_total"] / 1024, 2),
+    "mem_available": round(host_info["mem_available"] / 1024, 2),
 }
 
 print(b64encode(dumps(report).encode()).decode())

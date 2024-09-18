@@ -66,7 +66,21 @@ def get_proc_info(pid):
     except FileNotFoundError:
         return None
 
+def get_host_info():
+    rv = dict()
+    rv_keys_map = {
+        "MemTotal": "mem_total",
+        "MemAvailable": "mem_available",
+    }
+    with open("/proc/meminfo") as meminfo_file:
+        for line in meminfo_file:
+            line_parts = line.strip().split(":")
+            if line_parts[0] in rv_keys_map.keys():
+                rv[rv_keys_map[line_parts[0]]] = float(line_parts[1].split()[0])
+    return rv
+
 report = {
+    "host": dict(),
     "proc": dict(),
     "vm": dict()
 }
@@ -88,5 +102,11 @@ for proc in set(get_proc_list()) - set([x["pid"] for x in report["vm"].values()]
             "name": proc_info["name"] if proc_info["name"].find(proc_info["comm"]) == 0 else "{}:{}".format(proc_info["name"], proc_info["comm"]),
             "rss": proc_info["rss"] / 1024
         }
+
+host_info = get_host_info()
+report["host"] = {
+    "mem_total": host_info["mem_total"] / 1024,
+    "mem_available": host_info["mem_available"] / 1024,
+}
 
 print(b64encode(dumps(report).encode()).decode())

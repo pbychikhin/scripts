@@ -38,7 +38,7 @@ Vm = namedtuple("Vm", ["host", "uuid", "memory", "rss", "ratio"])
 for hk, hv in host_report.items():
     report["mem_all_hosts"]["mem_total"] += hv["host"]["mem_total"]
     report["mem_all_hosts"]["mem_available"] += hv["host"]["mem_available"]
-    hosts.append(Host(hk, hv["host"]["mem_total"], hv["host"]["mem_available"]))
+    hosts.append(Host(hk, hv["host"]["mem_total"], hv["host"]["mem_available"], hv["host"]["ratio"]))
     for pk, pv in hv["proc"].items():
         procs.append(Proc(hk, pv["name"], pv["rss"]))
     for vk, vv in hv["vm"].items():

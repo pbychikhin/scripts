@@ -3,6 +3,7 @@ from collections import namedtuple
 from json import load, loads
 from base64 import b64decode
 from sys import stdin
+from argparse import ArgumentParser
 
 host_report = dict()
 
@@ -54,8 +55,15 @@ report["top_n_vms_by_memory"] = sorted(vms, key=lambda a: a.memory, reverse=True
 report["top_n_vms_by_rss"] = sorted(vms, key=lambda a: a.rss, reverse=True)
 report["top_n_vms_by_ratio"] = sorted(vms, key=lambda a: a.ratio, reverse=True)
 
-n = 10
+parser = ArgumentParser(description="Merge reports from hosts")
+parser.add_argument("-n", metavar="N", type=int, required=False, default=10, help="Top N-items to report")
+args = parser.parse_args()
 
+n = args.n
+
+print("Total hosts/procs/vms")
+print("hosts {}, procs {}, vms {}".format(len(hosts), len(procs), len(vms)))
+print("")
 print("Total/available memory across all hosts")
 print("mem_total {mem_total}, mem_available {mem_available}, ratio {ratio}".format(**report["mem_all_hosts"]))
 print("")

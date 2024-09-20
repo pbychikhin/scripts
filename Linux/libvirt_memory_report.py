@@ -87,12 +87,11 @@ report = {
 
 for vm in get_vm_list():
     vm_info = get_vm_info(vm)
-    ratio = round(vm_info["rss"] / vm_info["memory"], 2)
     report["vm"][vm] = {
         "pid": vm_info["pid"],
         "memory": round(vm_info["memory"] / 1024, 2),
         "rss": round(vm_info["rss"] / 1024, 2),
-        "ratio": ratio
+        "ratio": round(vm_info["rss"] / vm_info["memory"], 2)
     }
 
 for proc in set(get_proc_list()) - set([x["pid"] for x in report["vm"].values()]):
@@ -107,6 +106,7 @@ host_info = get_host_info()
 report["host"] = {
     "mem_total": round(host_info["mem_total"] / 1024, 2),
     "mem_available": round(host_info["mem_available"] / 1024, 2),
+    "ratio": round(host_info["mem_available"] / host_info["mem_total"], 2)
 }
 
 print(b64encode(dumps(report).encode()).decode())

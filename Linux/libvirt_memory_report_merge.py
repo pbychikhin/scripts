@@ -65,7 +65,7 @@ print("Total hosts/procs/vms")
 print("hosts {}, procs {}, vms {}".format(len(hosts), len(procs), len(vms)))
 print("")
 print("Total/available memory across all hosts")
-print("mem_total {mem_total}, mem_available {mem_available}, ratio {ratio}".format(**report["mem_all_hosts"]))
+print("mem_total {mem_total:.2f}, mem_available {mem_available:.2f}, ratio {ratio:.2f}".format(**report["mem_all_hosts"]))
 print("")
 print("Top {} hosts with least memory available".format(n))
 for i in report["top_n_hosts_least_mem_available"][:n]:
@@ -76,7 +76,7 @@ for i in report["top_n_procs_biggest_rss"][:n]:
     print(i)
 print("")
 print("Total memory/rss of all VMs across all hosts")
-print("memory {memory}, rss {rss}, ratio {ratio}".format(**report["mem_all_vms"]))
+print("memory {memory:.2f}, rss {rss:.2f}, ratio {ratio:.2f}".format(**report["mem_all_vms"]))
 print("")
 print("Top {} VMs by memory".format(n))
 for i in report["top_n_vms_by_memory"][:n]:

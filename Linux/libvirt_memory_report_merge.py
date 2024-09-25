@@ -4,6 +4,7 @@ from json import load, loads
 from base64 import b64decode
 from sys import stdin
 from argparse import ArgumentParser
+from openpyxl import Workbook
 
 host_report = dict()
 
@@ -57,9 +58,11 @@ report["top_n_vms_by_ratio"] = sorted(vms, key=lambda a: a.ratio, reverse=True)
 
 parser = ArgumentParser(description="Merge reports from hosts")
 parser.add_argument("-n", metavar="N", type=int, required=False, default=10, help="Top N-items to report")
+parser.add_argument("-x", metavar="name", type=str, required=False, help="Excel report file name")
 args = parser.parse_args()
 
 n = args.n
+xlsxpath = args.x
 
 print("Total hosts/procs/vms")
 print("hosts {}, procs {}, vms {}".format(len(hosts), len(procs), len(vms)))
@@ -89,3 +92,16 @@ print("")
 print("Top {} VMs by ratio".format(n))
 for i in report["top_n_vms_by_ratio"][:n]:
     print(i)
+
+if xlsxpath:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Totals"
+    ws.append(["Total hosts/procs/vms", "hosts", "procs", "vms"])
+    ws.append([None, len(hosts), len(procs), len(vms)])
+    ws.append(["Total/available memory across all hosts", "mem_total", "mem_available", "ratio"])
+    ws.append([None] + [round(report["mem_all_hosts"][x], 2) for x in ["mem_total", "mem_available", "ratio"]])
+    ws.append(["Total memory/rss of all VMs across all hosts", "memory", "rss", "ratio"])
+    ws.append([None] + [round(report["mem_all_vms"][x], 2) for x in ["memory", "rss", "ratio"]])
+    wb.save(xlsxpath)
+

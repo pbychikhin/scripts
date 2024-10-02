@@ -3,7 +3,6 @@ import os
 import sys
 from copy import copy
 from openpyxl.cell import Cell
-from openpyxl.utils import get_column_letter
 from os.path import basename
 from datetime import datetime
 from os.path import exists as path_exists
@@ -56,11 +55,11 @@ def prepare_report_file(with_timestamp=True):
     return path_join(report_dir, report_file)
 
 
-def adjust_col_width(sheet, row_i, header):
-    for col_i in range(len(header)):
-        value_len = len(str(sheet[row_i][col_i].value))
-        if sheet.column_dimensions[get_column_letter(col_i + 1)].width <= value_len:
-            sheet.column_dimensions[get_column_letter(col_i + 1)].width = (value_len + 1)
+def adjust_col_width(sheet, row_i):
+    for cell in sheet[row_i]:
+        value_len = len(str(cell.value))
+        if sheet.column_dimensions[cell.column_letter].width <= value_len:
+            sheet.column_dimensions[cell.column_letter].width = (value_len + 1)
 
 
 class CellProperties:

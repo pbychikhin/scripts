@@ -107,4 +107,7 @@ if args.x:
     for row_i in range(1, 6, 2):
         for cell in ws[row_i]:
             cell_props.HeaderFont(cell)
-    wb.save(prepare_report_file())
+        adjust_col_width(ws, row_i)
+    report_file = prepare_report_file()
+    logmsg("Write report {}".format(report_file))
+    wb.save(report_file)

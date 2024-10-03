@@ -95,6 +95,7 @@ for i in report["top_n_vms_by_ratio"][:n]:
 
 if args.x:
     wb = Workbook()
+
     ws = wb.active
     ws.title = "Totals"
     ws.append(["Total hosts/procs/vms", "hosts", "procs", "vms"])
@@ -107,7 +108,42 @@ if args.x:
     for row_i in range(1, 6, 2):
         for cell in ws[row_i]:
             cell_props.HeaderFont(cell)
-        adjust_col_width(ws, row_i)
+
+    top_reports_meta = [
+        {
+            "name": "top_n_hosts_least_mem_available",
+            "header": "Top {} hosts with least memory available".format(n)
+        },
+        {
+            "name": "top_n_procs_biggest_rss",
+            "header": "Top {} processes with biggest rss".format(n)
+        },
+        {
+            "name": "top_n_vms_by_memory",
+            "header": "Top {} VMs by memory".format(n)
+        },
+        {
+            "name": "top_n_vms_by_rss",
+            "header": "Top {} VMs by rss".format(n)
+        },
+        {
+            "name": "top_n_vms_by_ratio",
+            "header": "Top {} VMs by ratio".format(n)
+        }
+    ]
+    for r in top_reports_meta:
+        ws = wb.create_sheet(r["name"])
+        ws.append((r["header"],) + report[r["name"]][0]._fields)
+        for i in report[r["name"]][:n]:
+            ws.append(("",) + tuple(i))
+        for cell in ws[1]:
+            cell_props.HeaderFont(cell)
+        ws.freeze_panes = "B2"
+
+    for ws in wb.worksheets:
+        for row_i in range(1, ws.max_row + 1):
+            adjust_col_width(ws, row_i)
+
     report_file = prepare_report_file()
     logmsg("Write report {}".format(report_file))
     wb.save(report_file)

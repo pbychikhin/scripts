@@ -6,6 +6,7 @@ from sys import stdin
 from argparse import ArgumentParser
 from openpyxl import Workbook
 from report_lib import *
+from statistics import mean, median, pstdev
 
 host_report = dict()
 
@@ -28,7 +29,8 @@ report = {
     },
     "top_n_vms_by_memory": list(),
     "top_n_vms_by_rss": list(),
-    "top_n_vms_by_ratio": list()
+    "top_n_vms_by_ratio": list(),
+    "proc_statistics": list()
 }
 
 hosts = list()
@@ -37,6 +39,7 @@ vms = list()
 Host = namedtuple("Host", ["host", "mem_total", "mem_available", "ratio"])
 Proc = namedtuple("Proc", ["host", "name", "rss"])
 Vm = namedtuple("Vm", ["host", "uuid", "memory", "rss", "ratio"])
+ProcS = namedtuple("ProcS", ["name", "mean_rss", "median_rss", "max_rss", "pstdev_rss", "pstdev_rss_ratio"])    # Proc statistics
 
 for hk, hv in host_report.items():
     report["mem_all_hosts"]["mem_total"] += hv["host"]["mem_total"]
@@ -57,6 +60,21 @@ report["top_n_vms_by_memory"] = sorted(vms, key=lambda a: a.memory, reverse=True
 report["top_n_vms_by_rss"] = sorted(vms, key=lambda a: a.rss, reverse=True)
 report["top_n_vms_by_ratio"] = sorted(vms, key=lambda a: a.ratio, reverse=True)
 
+proc_statistics = dict()
+for p in procs:
+    if p.name not in proc_statistics:
+        proc_statistics[p.name] = {
+            "rss": [p.rss]
+        }
+    else:
+        proc_statistics[p.name]["rss"].append(p.rss)
+for k, v in proc_statistics.items():
+    mean_rss = mean(v["rss"])
+    pstdev_rss = pstdev(v["rss"])
+    pstdev_rss_ratio = pstdev_rss / mean_rss
+    report["proc_statistics"].append(ProcS(k, round(mean_rss, 2), round(median(v["rss"]), 2), round(max(v["rss"]), 2), round(pstdev_rss, 2), round(pstdev_rss_ratio, 2)))
+report["proc_statistics"] = sorted(report["proc_statistics"], key=lambda a: a.median_rss, reverse=True)
+
 parser = ArgumentParser(description="Merge reports from hosts")
 parser.add_argument("-n", metavar="N", type=int, required=False, default=10, help="Top N-items to report")
 parser.add_argument("-x", default=False, required=False, action="store_true", help="Write Excel report")
@@ -70,6 +88,9 @@ print("")
 print("Total/available memory across all hosts")
 print("mem_total {mem_total:.2f}, mem_available {mem_available:.2f}, ratio {ratio:.2f}".format(**report["mem_all_hosts"]))
 print("")
+print("Total memory/rss of all VMs across all hosts")
+print("memory {memory:.2f}, rss {rss:.2f}, ratio {ratio:.2f}".format(**report["mem_all_vms"]))
+print("")
 print("Top {} hosts with least memory available".format(n))
 for i in report["top_n_hosts_least_mem_available"][:n]:
     print(i)
@@ -78,20 +99,6 @@ print("Top {} processes with biggest rss".format(n))
 for i in report["top_n_procs_biggest_rss"][:n]:
     print(i)
 print("")
-print("Total memory/rss of all VMs across all hosts")
-print("memory {memory:.2f}, rss {rss:.2f}, ratio {ratio:.2f}".format(**report["mem_all_vms"]))
-print("")
-print("Top {} VMs by memory".format(n))
-for i in report["top_n_vms_by_memory"][:n]:
-    print(i)
-print("")
-print("Top {} VMs by rss".format(n))
-for i in report["top_n_vms_by_rss"][:n]:
-    print(i)
-print("")
-print("Top {} VMs by ratio".format(n))
-for i in report["top_n_vms_by_ratio"][:n]:
-    print(i)
 
 if args.x:
     wb = Workbook()
@@ -109,32 +116,45 @@ if args.x:
         for cell in ws[row_i]:
             cell_props.HeaderFont(cell)
 
-    top_reports_meta = [
+    reports_meta = [
         {
             "name": "top_n_hosts_least_mem_available",
-            "header": "Top {} hosts with least memory available".format(n)
+            "header": "Top {} hosts with least memory available".format(n),
+            "top": True
         },
         {
             "name": "top_n_procs_biggest_rss",
-            "header": "Top {} processes with biggest rss".format(n)
+            "header": "Top {} processes with biggest rss".format(n),
+            "top": True
         },
         {
             "name": "top_n_vms_by_memory",
-            "header": "Top {} VMs by memory".format(n)
+            "header": "Top {} VMs by memory".format(n),
+            "top": True
         },
         {
             "name": "top_n_vms_by_rss",
-            "header": "Top {} VMs by rss".format(n)
+            "header": "Top {} VMs by rss".format(n),
+            "top": True
         },
         {
             "name": "top_n_vms_by_ratio",
-            "header": "Top {} VMs by ratio".format(n)
+            "header": "Top {} VMs by ratio".format(n),
+            "top": True
+        },
+        {
+            "name": "proc_statistics",
+            "header": "Proc statistics",
+            "top": False
         }
     ]
-    for r in top_reports_meta:
+    for r in reports_meta:
         ws = wb.create_sheet(r["name"])
         ws.append((r["header"],) + report[r["name"]][0]._fields)
-        for i in report[r["name"]][:n]:
+        boundary = len(report[r["name"]])
+        if r["top"]:
+            boundary = n
+        for i in report[r["name"]][:boundary]:
             ws.append(("",) + tuple(i))
         for cell in ws[1]:
             cell_props.HeaderFont(cell)

@@ -6,6 +6,7 @@ from base64 import b64encode
 # from sys import stderr
 from os import scandir, readlink
 from os.path import basename
+from configparser import ConfigParser
 
 def get_vm_list():
     try:
@@ -80,6 +81,9 @@ def get_host_info():
             line_parts = line.strip().split(":")
             if line_parts[0] in rv_keys_map.keys():
                 rv[rv_keys_map[line_parts[0]]] = float(line_parts[1].split()[0])
+    nova_conf = ConfigParser()
+    nova_conf.read("/etc/nova/nova.conf")
+    rv["os_ram_allocation_ratio"] = nova_conf.getfloat("DEFAULT", "ram_allocation_ratio", fallback=0.0)
     return rv
 
 report = {

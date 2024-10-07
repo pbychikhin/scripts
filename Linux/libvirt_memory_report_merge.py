@@ -56,9 +56,9 @@ for hk, hv in host_report.items():
             report["mem_all_vms"]["memory"] += vv["memory"]
             report["mem_all_vms"]["rss"] += vv["rss"]
             vms.append(Vm(hk, vk, vv["memory"], vv["rss"], vv["ratio"]))
-for h in hosts:
-    if h.os_ram_allocation_ratio == 0.0:
-        h._replace(os_ram_allocation_ratio=os_ram_allocation_ratio)
+for i in range(len(hosts)):
+    if hosts[i].os_ram_allocation_ratio == 0.0:
+        hosts[i] = hosts[i]._replace(os_ram_allocation_ratio=os_ram_allocation_ratio)
 
 report["mem_all_hosts"]["ratio"] = round(report["mem_all_hosts"]["mem_available"] / report["mem_all_hosts"]["mem_total"], 2) if report["mem_all_hosts"]["mem_total"] != 0 else 0
 report["mem_all_vms"]["ratio"] = round(report["mem_all_vms"]["rss"] / report["mem_all_vms"]["memory"], 2) if report["mem_all_vms"]["memory"] != 0 else 0

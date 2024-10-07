@@ -8,7 +8,10 @@ from os import scandir, readlink
 from os.path import basename
 
 def get_vm_list():
-    return run(["virsh", "list", "--all", "--uuid"], check=True, stdout=PIPE, universal_newlines=True).stdout.strip().splitlines()
+    try:
+        return run(["virsh", "list", "--all", "--uuid"], check=True, stdout=PIPE, universal_newlines=True).stdout.strip().splitlines()
+    except FileNotFoundError:
+        return list()
 
 def get_vm_info(vm_uuid):
     rv = {

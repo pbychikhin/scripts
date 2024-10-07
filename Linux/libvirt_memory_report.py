@@ -113,7 +113,8 @@ host_info = get_host_info()
 report["host"] = {
     "mem_total": round(host_info["mem_total"] / 1024, 2),
     "mem_available": round(host_info["mem_available"] / 1024, 2),
-    "ratio": round(host_info["mem_available"] / host_info["mem_total"], 2)
+    "ratio": round(host_info["mem_available"] / host_info["mem_total"], 2),
+    "os_ram_allocation_ratio": host_info["os_ram_allocation_ratio"]
 }
 
 print(b64encode(dumps(report).encode()).decode())

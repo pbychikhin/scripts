@@ -36,29 +36,30 @@ report = {
 hosts = list()
 procs = list()
 vms = list()
-os_ram_allocation_ratio = 1.5
+os_ram_allocation_ratio_global = 1.5
 Host = namedtuple("Host", ["host", "mem_total", "mem_available", "ratio", "os_ram_allocation_ratio"])
 Proc = namedtuple("Proc", ["host", "name", "rss"])
 Vm = namedtuple("Vm", ["host", "uuid", "memory", "rss", "ratio"])
 ProcS = namedtuple("ProcS", ["name", "mean_rss", "median_rss", "max_rss", "pstdev_rss", "pstdev_rss_ratio"])    # Proc statistics
 
 for hk, hv in host_report.items():
-    if hk.lower().startswith("ctl0"):
+    host = hk.split(".")[0]
+    if host.lower().startswith("ctl0"):
         if hv["host"]["os_ram_allocation_ratio"] != 0.0:
-            os_ram_allocation_ratio = hv["host"]["os_ram_allocation_ratio"]
+            os_ram_allocation_ratio_global = hv["host"]["os_ram_allocation_ratio"]
     else:
         report["mem_all_hosts"]["mem_total"] += hv["host"]["mem_total"]
         report["mem_all_hosts"]["mem_available"] += hv["host"]["mem_available"]
-        hosts.append(Host(hk, hv["host"]["mem_total"], hv["host"]["mem_available"], hv["host"]["ratio"], hv["host"]["os_ram_allocation_ratio"]))
+        hosts.append(Host(host, hv["host"]["mem_total"], hv["host"]["mem_available"], hv["host"]["ratio"], hv["host"]["os_ram_allocation_ratio"]))
         for pk, pv in hv["proc"].items():
-            procs.append(Proc(hk, pv["name"], pv["rss"]))
+            procs.append(Proc(host, pv["name"], pv["rss"]))
         for vk, vv in hv["vm"].items():
             report["mem_all_vms"]["memory"] += vv["memory"]
             report["mem_all_vms"]["rss"] += vv["rss"]
-            vms.append(Vm(hk, vk, vv["memory"], vv["rss"], vv["ratio"]))
+            vms.append(Vm(host, vk, vv["memory"], vv["rss"], vv["ratio"]))
 for i in range(len(hosts)):
     if hosts[i].os_ram_allocation_ratio == 0.0:
-        hosts[i] = hosts[i]._replace(os_ram_allocation_ratio=os_ram_allocation_ratio)
+        hosts[i] = hosts[i]._replace(os_ram_allocation_ratio=os_ram_allocation_ratio_global)
 
 report["mem_all_hosts"]["ratio"] = round(report["mem_all_hosts"]["mem_available"] / report["mem_all_hosts"]["mem_total"], 2) if report["mem_all_hosts"]["mem_total"] != 0 else 0
 report["mem_all_vms"]["ratio"] = round(report["mem_all_vms"]["rss"] / report["mem_all_vms"]["memory"], 2) if report["mem_all_vms"]["memory"] != 0 else 0

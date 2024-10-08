@@ -84,6 +84,7 @@ def get_host_info():
     nova_conf = ConfigParser(strict=False)
     nova_conf.read("/etc/nova/nova.conf")
     rv["os_ram_allocation_ratio"] = nova_conf.getfloat("DEFAULT", "ram_allocation_ratio", fallback=0.0)
+    rv["os_reserved_host_memory_mb"] = nova_conf.getint("DEFAULT", "reserved_host_memory_mb", fallback=512)
     return rv
 
 report = {
@@ -114,7 +115,8 @@ report["host"] = {
     "mem_total": round(host_info["mem_total"] / 1024, 2),
     "mem_available": round(host_info["mem_available"] / 1024, 2),
     "ratio": round(host_info["mem_available"] / host_info["mem_total"], 2),
-    "os_ram_allocation_ratio": host_info["os_ram_allocation_ratio"]
+    "os_ram_allocation_ratio": host_info["os_ram_allocation_ratio"],
+    "os_reserved_host_memory_mb": host_info["os_reserved_host_memory_mb"]
 }
 
 print(b64encode(dumps(report).encode()).decode())

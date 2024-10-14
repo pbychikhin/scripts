@@ -97,9 +97,9 @@ for vm in get_vm_list():
     vm_info = get_vm_info(vm)
     report["vm"][vm] = {
         "pid": vm_info["pid"],
-        "memory": round(vm_info["memory"] / 1024, 2),
-        "rss": round(vm_info["rss"] / 1024, 2),
-        "ratio": round(vm_info["rss"] / vm_info["memory"], 2)
+        "memory": vm_info["memory"] / 1024,
+        "rss": vm_info["rss"] / 1024,
+        "ratio": vm_info["rss"] / vm_info["memory"]
     }
 
 for proc in set(get_proc_list()) - set([x["pid"] for x in report["vm"].values()]):
@@ -107,14 +107,14 @@ for proc in set(get_proc_list()) - set([x["pid"] for x in report["vm"].values()]
     if proc_info is not None:
         report["proc"][proc] = {
             "name": proc_info["name"] if proc_info["name"].find(proc_info["comm"]) == 0 else "{}:{}".format(proc_info["name"], proc_info["comm"]),
-            "rss": round(proc_info["rss"] / 1024, 2)
+            "rss": proc_info["rss"] / 1024
         }
 
 host_info = get_host_info()
 report["host"] = {
-    "mem_total": round(host_info["mem_total"] / 1024, 2),
-    "mem_available": round(host_info["mem_available"] / 1024, 2),
-    "ratio": round(host_info["mem_available"] / host_info["mem_total"], 2),
+    "mem_total": host_info["mem_total"] / 1024,
+    "mem_available": host_info["mem_available"] / 1024,
+    "ratio": host_info["mem_available"] / host_info["mem_total"],
     "os_ram_allocation_ratio": host_info["os_ram_allocation_ratio"],
     "os_reserved_host_memory_mb": host_info["os_reserved_host_memory_mb"]
 }

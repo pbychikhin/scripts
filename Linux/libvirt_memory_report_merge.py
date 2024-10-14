@@ -80,8 +80,8 @@ for i in range(len(report["host_statistics"])):
         report["host_statistics"][i] = report["host_statistics"][i]._replace(os_ram_allocation_ratio=os_ram_allocation_ratio_global)
 report["host_statistics"] = sorted(report["host_statistics"], key=lambda a: a.mem_available)
 
-report["mem_all_hosts"]["ratio"] = round(report["mem_all_hosts"]["mem_available"] / report["mem_all_hosts"]["mem_total"], 2) if report["mem_all_hosts"]["mem_total"] != 0 else 0
-report["mem_all_vms"]["ratio"] = round(report["mem_all_vms"]["rss"] / report["mem_all_vms"]["memory"], 2) if report["mem_all_vms"]["memory"] != 0 else 0
+report["mem_all_hosts"]["ratio"] = report["mem_all_hosts"]["mem_available"] / report["mem_all_hosts"]["mem_total"] if report["mem_all_hosts"]["mem_total"] != 0 else 0
+report["mem_all_vms"]["ratio"] = report["mem_all_vms"]["rss"] / report["mem_all_vms"]["memory"] if report["mem_all_vms"]["memory"] != 0 else 0
 report["top_n_hosts_least_mem_available"] = sorted(hosts, key=lambda a: a.mem_available)
 report["top_n_procs_biggest_rss"] = sorted(procs, key=lambda a: a.rss, reverse=True)
 report["top_n_vms_by_memory"] = sorted(vms, key=lambda a: a.memory, reverse=True)
@@ -100,7 +100,7 @@ for k, v in proc_statistics.items():
     mean_rss = mean(v["rss"])
     pstdev_rss = pstdev(v["rss"])
     pstdev_rss_ratio = pstdev_rss / mean_rss
-    report["proc_statistics"].append(ProcS(k, round(mean_rss, 2), round(median(v["rss"]), 2), round(max(v["rss"]), 2), round(pstdev_rss, 2), round(pstdev_rss_ratio, 2)))
+    report["proc_statistics"].append(ProcS(k, mean_rss, median(v["rss"]), max(v["rss"]), pstdev_rss, pstdev_rss_ratio))
 report["proc_statistics"] = sorted(report["proc_statistics"], key=lambda a: a.median_rss, reverse=True)
 
 parser = ArgumentParser(description="Merge reports from hosts")
@@ -136,9 +136,9 @@ if args.x:
     ws.append(["Total hosts/procs/vms", "hosts", "procs", "vms"])
     ws.append([None, len(hosts), len(procs), len(vms)])
     ws.append(["Total/available memory across all hosts", "mem_total", "mem_available", "ratio"])
-    ws.append([None] + [round(report["mem_all_hosts"][x], 2) for x in ["mem_total", "mem_available", "ratio"]])
+    ws.append([None] + [report["mem_all_hosts"][x] for x in ["mem_total", "mem_available", "ratio"]])
     ws.append(["Total memory/rss of all VMs across all hosts", "memory", "rss", "ratio"])
-    ws.append([None] + [round(report["mem_all_vms"][x], 2) for x in ["memory", "rss", "ratio"]])
+    ws.append([None] + [report["mem_all_vms"][x] for x in ["memory", "rss", "ratio"]])
     cell_props = CellProperties(ws[1][0])
     for row_i in range(1, 6, 2):
         for cell in ws[row_i]:

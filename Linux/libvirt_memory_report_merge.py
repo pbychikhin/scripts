@@ -6,7 +6,8 @@ from sys import stdin
 from argparse import ArgumentParser
 from openpyxl import Workbook
 from report_lib import *
-from statistics import mean, median, pstdev
+# from statistics import mean, median, pstdev
+from numpy import mean, percentile, std
 
 host_report = dict()
 
@@ -41,7 +42,7 @@ os_ram_allocation_ratio_global = 1.5
 Host = namedtuple("Host", ["host", "mem_total", "mem_available", "ratio", "os_ram_allocation_ratio", "os_reserved_host_memory_mb"])
 Proc = namedtuple("Proc", ["host", "name", "rss"])
 Vm = namedtuple("Vm", ["host", "uuid", "memory", "rss", "ratio"])
-ProcS = namedtuple("ProcS", ["name", "mean_rss", "median_rss", "max_rss", "pstdev_rss", "pstdev_rss_ratio"])    # Proc statistics
+ProcS = namedtuple("ProcS", ["name", "p15_rss", "p30_rss", "median_rss", "p75_rss", "p95_rss", "max_rss", "mean_rss", "std_rss", "std_rss_ratio"])    # Proc statistics
 HostS = namedtuple("HostS", ["host", "mem_total", "mem_available", "mem_procs_rss", "mem_vms_allocated", "mem_vms_rss", "os_ram_allocation_ratio", "os_reserved_host_memory_mb"])   # Host statistics
 
 for hk, hv in host_report.items():
@@ -98,9 +99,18 @@ for p in procs:
         proc_statistics[p.name]["rss"].append(p.rss)
 for k, v in proc_statistics.items():
     mean_rss = mean(v["rss"])
-    pstdev_rss = pstdev(v["rss"])
-    pstdev_rss_ratio = pstdev_rss / mean_rss
-    report["proc_statistics"].append(ProcS(k, mean_rss, median(v["rss"]), max(v["rss"]), pstdev_rss, pstdev_rss_ratio))
+    std_rss = std(v["rss"])
+    std_rss_ratio = std_rss / mean_rss
+    report["proc_statistics"].append(ProcS(k,
+                                           percentile(v["rss"], 15, interpolation="higher"),
+                                           percentile(v["rss"], 30, interpolation="higher"),
+                                           percentile(v["rss"], 50, interpolation="higher"),
+                                           percentile(v["rss"], 75, interpolation="higher"),
+                                           percentile(v["rss"], 95, interpolation="higher"),
+                                           max(v["rss"]),
+                                           mean_rss,
+                                           std_rss,
+                                           std_rss_ratio))
 report["proc_statistics"] = sorted(report["proc_statistics"], key=lambda a: a.median_rss, reverse=True)
 
 parser = ArgumentParser(description="Merge reports from hosts")
@@ -154,37 +164,44 @@ if args.x:
         {
             "name": "top_n_hosts_least_mem_available",
             "header": "Top {} hosts with least memory available".format(n),
-            "top": True
+            "top": True,
+            "float_num_cols": (2, 3, 4, 5)
         },
         {
             "name": "top_n_procs_biggest_rss",
             "header": "Top {} processes with biggest rss".format(n),
-            "top": True
+            "top": True,
+            "float_num_cols": (3,)
         },
         {
             "name": "top_n_vms_by_memory",
             "header": "Top {} VMs by memory".format(n),
-            "top": True
+            "top": True,
+            "float_num_cols": (4, 5)
         },
         {
             "name": "top_n_vms_by_rss",
             "header": "Top {} VMs by rss".format(n),
-            "top": True
+            "top": True,
+            "float_num_cols": (4, 5)
         },
         {
             "name": "top_n_vms_by_ratio",
             "header": "Top {} VMs by ratio".format(n),
-            "top": True
+            "top": True,
+            "float_num_cols": (4, 5)
         },
         {
             "name": "proc_statistics",
             "header": "Proc statistics",
-            "top": False
+            "top": False,
+            "float_num_cols": tuple(range(2, 11))
         },
         {
             "name": "host_statistics",
             "header": "Host statistics",
-            "top": False
+            "top": False,
+            "float_num_cols": tuple(range(2, 8))
         }
     ]
     for r in reports_meta:
@@ -197,6 +214,12 @@ if args.x:
             ws.append(("",) + tuple(i))
         for cell in ws[1]:
             cell_props.HeaderFont(cell)
+        for row_i in range(1, ws.max_row + 1):
+            col_i = 0
+            for cell in ws[row_i]:
+                if col_i in r["float_num_cols"]:
+                    cell_props.FloatNumber(cell)
+                col_i += 1
         ws.freeze_panes = "B2"
 
     for ws in wb.worksheets:

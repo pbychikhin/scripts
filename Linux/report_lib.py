@@ -3,6 +3,7 @@ import os
 import sys
 from copy import copy
 from openpyxl.cell import Cell
+from openpyxl.styles.numbers import FORMAT_NUMBER_00
 from os.path import basename
 from datetime import datetime
 from os.path import exists as path_exists
@@ -57,7 +58,10 @@ def prepare_report_file(with_timestamp=True):
 
 def adjust_col_width(sheet, row_i):
     for cell in sheet[row_i]:
-        value_len = len(str(cell.value))
+        if isinstance(cell.value, float):
+            value_len = len(str(round(cell.value, 2)))
+        else:
+            value_len = len(str(cell.value))
         if sheet.column_dimensions[cell.column_letter].width <= value_len:
             sheet.column_dimensions[cell.column_letter].width = (value_len + 1)
 
@@ -74,6 +78,8 @@ class CellProperties:
         self.medium_fill.fgColor = "00FFFF00"
         self.high_fill.patternType = "solid"
         self.high_fill.fgColor = "00FF0000"
+        self.float_number = copy(base_cell.number_format)
+        self.float_number = FORMAT_NUMBER_00
 
     def BaseFont(self, cell: Cell):
         cell.font = self.base_font
@@ -89,3 +95,6 @@ class CellProperties:
 
     def HighFill(self, cell: Cell):
         cell.fill = self.high_fill
+
+    def FloatNumber(self, cell: Cell):
+        cell.number_format = self.float_number

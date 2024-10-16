@@ -143,6 +143,12 @@ if args.x:
     for row_i in range(1, 6, 2):
         for cell in ws[row_i]:
             cell_props.HeaderFont(cell)
+    for row_i in (4, 6):
+        col_i = 0
+        for cell in ws[row_i]:
+            if col_i > 0:
+                cell_props.FloatNumber(cell)
+            col_i += 1
 
     reports_meta = [
         {
